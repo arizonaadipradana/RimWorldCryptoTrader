@@ -6,7 +6,7 @@
     <li>1.4</li>
     <li>1.5</li>
   </supportedVersions>
-  <packageId>arizoenna.rimworldcryptotrader</packageId>
+  <packageId>arizoenna.rimworld.cryptotrader</packageId>
   <description>Simulate trade cryptocurrencies using real-time market data in your RimWorld colony! Convert your silver to USD and trade Bitcoin, Ethereum, and other popular cryptocurrencies.
 
 This is a simulation only - no real money or cryptocurrency is involved.
