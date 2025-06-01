@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ModMetaData>
+  <name>Crypto Trading Sim - 1.0</name>
+  <author>Arizona Adi Pradana</author>
+  <supportedVersions>
+    <li>1.4</li>
+    <li>1.5</li>
+  </supportedVersions>
+  <packageId>arizoenna.rimworldcryptotrader</packageId>
+  <description>Simulate trade cryptocurrencies using real-time market data in your RimWorld colony! Convert your silver to USD and trade Bitcoin, Ethereum, and other popular cryptocurrencies.
+
+This is a simulation only - no real money or cryptocurrency is involved.
+
+Press the assigned hotkey (default: Delete) to open the trading terminal.
+
+Features:
+- Multiple cryptocurrency support
+- Portfolio tracking with profit/loss calculations
+- Transaction history
+
+Open source: https://github.com/arizonaadipradana/RimWorldCryptoTrader/</description>
+  <url>https://github.com/arizonaadipradana/RimWorldCryptoTrader/</url>
+</ModMetaData>

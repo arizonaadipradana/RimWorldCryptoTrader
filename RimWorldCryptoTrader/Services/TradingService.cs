@@ -14,7 +14,14 @@ namespace RimWorldCryptoTrader.Services
 
         public static PlayerCryptoData GetPlayerData()
         {
-            return Current.Game.GetComponent<PlayerCryptoData>();
+            var playerData = Current.Game.GetComponent<PlayerCryptoData>();
+            if (playerData == null)
+            {
+                playerData = new PlayerCryptoData(Current.Game);
+                Current.Game.components.Add(playerData);
+                CryptoTraderConfig.DebugLog("Initialized PlayerCryptoData component.");
+            }
+            return playerData;
         }
 
         public static int GetColonySilverCount()
@@ -34,6 +41,7 @@ namespace RimWorldCryptoTrader.Services
                 totalSilver += silverItems.Sum(thing => thing.stackCount);
             }
 
+            CryptoTraderConfig.DebugLog($"Colony silver count: {totalSilver}");
             return totalSilver;
         }
 
@@ -41,6 +49,8 @@ namespace RimWorldCryptoTrader.Services
         {
             var playerData = GetPlayerData();
             var availableSilver = GetColonySilverCount();
+
+            CryptoTraderConfig.DebugLog($"Attempting to deposit {silverAmount} silver. Available: {availableSilver}");
 
             if (availableSilver < silverAmount)
             {
@@ -66,13 +76,35 @@ namespace RimWorldCryptoTrader.Services
                 return false;
             }
 
+            var usdAmount = silverAmount * SILVER_TO_USD_RATE;
+
+            // Check for large transaction confirmation
+            if (CryptoTraderConfig.IsLargeTransaction(usdAmount))
+            {
+                var confirmMessage = $"Large deposit: {silverAmount:N0} silver (${usdAmount:N0} USD). Continue?";
+                Find.WindowStack.Add(Dialog_MessageBox.CreateConfirmation(
+                    confirmMessage,
+                    () => ExecuteDeposit(silverAmount, usdAmount),
+                    false,
+                    "Confirm Large Deposit"
+                ));
+                return true; // Return true since we're handling it asynchronously
+            }
+
+            return ExecuteDeposit(silverAmount, usdAmount);
+        }
+
+        private static bool ExecuteDeposit(int silverAmount, float usdAmount)
+        {
+            var playerData = GetPlayerData();
+
             // Actually consume silver from the colony
             if (ConsumeSilverFromColony(silverAmount))
             {
-                var usdAmount = silverAmount * SILVER_TO_USD_RATE;
                 playerData.SilverDeposited += usdAmount;
                 Messages.Message($"Deposited {silverAmount:N0} silver → ${usdAmount:N0} USD (rate: 1 silver = ${SILVER_TO_USD_RATE} USD) to crypto exchange.",
                     MessageTypeDefOf.PositiveEvent);
+                CryptoTraderConfig.DebugLog($"Successfully deposited {silverAmount} silver for ${usdAmount} USD");
                 return true;
             }
             else
@@ -86,13 +118,36 @@ namespace RimWorldCryptoTrader.Services
         {
             var playerData = GetPlayerData();
 
+            CryptoTraderConfig.DebugLog($"Attempting to withdraw ${usdAmount} USD. Available: ${playerData.SilverDeposited}");
+
             if (playerData.SilverDeposited < usdAmount)
             {
                 Messages.Message("Insufficient deposited funds.", MessageTypeDefOf.RejectInput);
                 return false;
             }
 
+            // Check for large transaction confirmation
+            if (CryptoTraderConfig.IsLargeTransaction(usdAmount))
+            {
+                var silverAmount = (int)(usdAmount / SILVER_TO_USD_RATE);
+                var confirmMessage = $"Large withdrawal: ${usdAmount:N0} USD ({silverAmount:N0} silver). Continue?";
+                Find.WindowStack.Add(Dialog_MessageBox.CreateConfirmation(
+                    confirmMessage,
+                    () => ExecuteWithdrawal(usdAmount),
+                    false,
+                    "Confirm Large Withdrawal"
+                ));
+                return true; // Return true since we're handling it asynchronously
+            }
+
+            return ExecuteWithdrawal(usdAmount);
+        }
+
+        private static bool ExecuteWithdrawal(float usdAmount)
+        {
+            var playerData = GetPlayerData();
             var silverAmount = (int)(usdAmount / SILVER_TO_USD_RATE);
+            
             playerData.SilverDeposited -= usdAmount;
 
             // Add silver back to colony
@@ -100,6 +155,7 @@ namespace RimWorldCryptoTrader.Services
 
             Messages.Message($"Withdrew ${usdAmount:F0} USD → {silverAmount} silver (rate: 1 silver = ${SILVER_TO_USD_RATE} USD) from crypto exchange.",
                 MessageTypeDefOf.PositiveEvent);
+            CryptoTraderConfig.DebugLog($"Successfully withdrew ${usdAmount} USD for {silverAmount} silver");
             return true;
         }
 
@@ -107,13 +163,37 @@ namespace RimWorldCryptoTrader.Services
         {
             var playerData = GetPlayerData();
 
+            CryptoTraderConfig.DebugLog($"Attempting to buy {symbol} for ${usdAmount} at price ${cryptoPrice}");
+
             if (playerData.SilverDeposited < usdAmount)
             {
                 Messages.Message("Insufficient deposited funds for purchase.", MessageTypeDefOf.RejectInput);
                 return false;
             }
 
+            // Check for large transaction confirmation
+            if (CryptoTraderConfig.IsLargeTransaction(usdAmount))
+            {
+                var cryptoAmount = usdAmount / cryptoPrice;
+                var cryptoName = GetCryptoDisplayName(symbol);
+                var confirmMessage = $"Large purchase: ${usdAmount:N0} USD worth of {cryptoName} ({cryptoAmount:F8} {cryptoName}). Continue?";
+                Find.WindowStack.Add(Dialog_MessageBox.CreateConfirmation(
+                    confirmMessage,
+                    () => ExecuteBuy(symbol, usdAmount, cryptoPrice),
+                    false,
+                    "Confirm Large Purchase"
+                ));
+                return true; // Return true since we're handling it asynchronously
+            }
+
+            return ExecuteBuy(symbol, usdAmount, cryptoPrice);
+        }
+
+        private static bool ExecuteBuy(string symbol, float usdAmount, float cryptoPrice)
+        {
+            var playerData = GetPlayerData();
             var cryptoAmount = usdAmount / cryptoPrice;
+            
             playerData.SilverDeposited -= usdAmount;
             
             var currentHolding = playerData.GetCryptoHolding(symbol);
@@ -138,6 +218,7 @@ namespace RimWorldCryptoTrader.Services
 
             var buyDisplayName = GetCryptoDisplayName(symbol);
             Messages.Message($"Bought {cryptoAmount:F8} {buyDisplayName} for ${usdAmount:F2}", MessageTypeDefOf.PositiveEvent);
+            CryptoTraderConfig.DebugLog($"Successfully bought {cryptoAmount:F8} {symbol} for ${usdAmount}");
             return true;
         }
 
@@ -145,6 +226,8 @@ namespace RimWorldCryptoTrader.Services
         {
             var playerData = GetPlayerData();
             var currentHolding = playerData.GetCryptoHolding(symbol);
+
+            CryptoTraderConfig.DebugLog($"Attempting to sell {cryptoAmount} {symbol} at price ${cryptoPrice}. Current holding: {currentHolding}");
 
             if (currentHolding < cryptoAmount)
             {
@@ -154,6 +237,30 @@ namespace RimWorldCryptoTrader.Services
             }
 
             var usdReceived = cryptoAmount * cryptoPrice;
+
+            // Check for large transaction confirmation
+            if (CryptoTraderConfig.IsLargeTransaction(usdReceived))
+            {
+                var cryptoName = GetCryptoDisplayName(symbol);
+                var confirmMessage = $"Large sale: {cryptoAmount:F8} {cryptoName} for ${usdReceived:N0} USD. Continue?";
+                Find.WindowStack.Add(Dialog_MessageBox.CreateConfirmation(
+                    confirmMessage,
+                    () => ExecuteSell(symbol, cryptoAmount, cryptoPrice),
+                    false,
+                    "Confirm Large Sale"
+                ));
+                return true; // Return true since we're handling it asynchronously
+            }
+
+            return ExecuteSell(symbol, cryptoAmount, cryptoPrice);
+        }
+
+        private static bool ExecuteSell(string symbol, float cryptoAmount, float cryptoPrice)
+        {
+            var playerData = GetPlayerData();
+            var currentHolding = playerData.GetCryptoHolding(symbol);
+            var usdReceived = cryptoAmount * cryptoPrice;
+
             playerData.SetCryptoHolding(symbol, currentHolding - cryptoAmount);
             playerData.SilverDeposited += usdReceived;
 
@@ -183,6 +290,7 @@ namespace RimWorldCryptoTrader.Services
 
             var sellDisplayName = GetCryptoDisplayName(symbol);
             Messages.Message($"Sold {cryptoAmount:F8} {sellDisplayName} for ${usdReceived:F2}", MessageTypeDefOf.PositiveEvent);
+            CryptoTraderConfig.DebugLog($"Successfully sold {cryptoAmount:F8} {symbol} for ${usdReceived}");
             return true;
         }
 
@@ -219,6 +327,8 @@ namespace RimWorldCryptoTrader.Services
             silver.stackCount = amount;
             
             GenPlace.TryPlaceThing(silver, dropSpot, map, ThingPlaceMode.Near);
+            
+            CryptoTraderConfig.DebugLog($"Spawned {amount} silver at {dropSpot}");
         }
 
         public static string GetCryptoDisplayName(string symbol)

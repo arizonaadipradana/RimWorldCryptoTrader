@@ -31,12 +31,7 @@ namespace RimWorldCryptoTrader.Models
             set => SetCryptoHolding("BTCUSDT", value); 
         }
 
-        public PlayerCryptoData() 
-        { 
-            InitializeDefaults();
-        }
-        
-        public PlayerCryptoData(Game game) 
+        public PlayerCryptoData(Game game) : base()
         { 
             InitializeDefaults();
         }
@@ -47,6 +42,24 @@ namespace RimWorldCryptoTrader.Models
             {
                 trackedCryptos = new List<string> { "BTCUSDT" }; // Default to BTC
             }
+        }
+
+        public override void GameComponentTick()
+        {
+            base.GameComponentTick();
+            // Add any per-tick logic here if needed in the future
+        }
+
+        public override void StartedNewGame()
+        {
+            base.StartedNewGame();
+            InitializeDefaults();
+        }
+
+        public override void LoadedGame()
+        {
+            base.LoadedGame();
+            InitializeDefaults();
         }
 
         public override void ExposeData()

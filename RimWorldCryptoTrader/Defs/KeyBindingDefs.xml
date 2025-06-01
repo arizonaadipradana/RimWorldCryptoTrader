@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+  
+  <KeyBindingCategoryDef>
+    <defName>CryptoTrader</defName>
+    <label>Crypto Trader</label>
+    <description>Key bindings for the Crypto Trader mod.</description>
+    <checkForConflicts>true</checkForConflicts>
+  </KeyBindingCategoryDef>
+
+  <KeyBindingDef>
+    <defName>CryptoTrader_ToggleWindow</defName>
+    <category>CryptoTrader</category>
+    <label>Toggle crypto trading window</label>
+    <description>Opens or closes the cryptocurrency trading terminal. Default: Delete key</description>
+    <defaultKeyCodeA>Delete</defaultKeyCodeA>
+    <defaultKeyCodeB>None</defaultKeyCodeB>
+  </KeyBindingDef>
+
+</Defs>
