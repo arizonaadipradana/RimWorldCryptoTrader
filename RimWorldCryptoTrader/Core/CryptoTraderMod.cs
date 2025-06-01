@@ -33,15 +33,73 @@ namespace RimWorldCryptoTrader.Core
             Text.Font = GameFont.Small;
             listing.Gap();
 
+            // Key Binding Settings
+            listing.Label("Hotkey Configuration:");
+            listing.Gap(6f);
+
+            var keyRect = listing.GetRect(30f);
+            var keyLabelRect = new Rect(keyRect.x, keyRect.y, 150f, 30f);
+            var keyButtonRect = new Rect(keyRect.x + 160f, keyRect.y, 120f, 30f);
+            var resetKeyRect = new Rect(keyRect.x + 290f, keyRect.y, 80f, 30f);
+
+            Widgets.Label(keyLabelRect, "Toggle Trading Window:");
+            
+            // Key binding button
+            string buttonText = CryptoTraderSettings.waitingForKeyInput ? "Press any key..." : CryptoTraderSettings.keyInputLabel;
+            GUI.color = CryptoTraderSettings.waitingForKeyInput ? Color.yellow : Color.white;
+            
+            if (Widgets.ButtonText(keyButtonRect, buttonText))
+            {
+                CryptoTraderSettings.waitingForKeyInput = true;
+            }
+            
+            GUI.color = Color.white;
+
+            // Reset key button
+            if (Widgets.ButtonText(resetKeyRect, "Reset"))
+            {
+                CryptoTraderSettings.toggleKey = KeyCode.Delete;
+                CryptoTraderSettings.keyInputLabel = "Delete";
+                CryptoTraderSettings.waitingForKeyInput = false;
+            }
+
+            // Handle key input
+            if (CryptoTraderSettings.waitingForKeyInput && Event.current.type == EventType.KeyDown)
+            {
+                var pressedKey = Event.current.keyCode;
+                
+                // Ignore modifier keys and some problematic keys
+                if (pressedKey != KeyCode.None && 
+                    pressedKey != KeyCode.LeftShift && pressedKey != KeyCode.RightShift &&
+                    pressedKey != KeyCode.LeftControl && pressedKey != KeyCode.RightControl &&
+                    pressedKey != KeyCode.LeftAlt && pressedKey != KeyCode.RightAlt &&
+                    pressedKey != KeyCode.LeftCommand && pressedKey != KeyCode.RightCommand)
+                {
+                    CryptoTraderSettings.toggleKey = pressedKey;
+                    CryptoTraderSettings.keyInputLabel = CryptoTraderSettings.GetKeyDisplayName(pressedKey);
+                    CryptoTraderSettings.waitingForKeyInput = false;
+                    Event.current.Use(); // Consume the event
+                }
+            }
+
+            GUI.color = Color.white;
+            listing.Gap();
+
             // Conversion Rate Settings
             listing.Label("Conversion Rate Settings:");
             listing.Gap(6f);
 
-            listing.Label($"Silver to USD Rate: {CryptoTraderSettings.silverToUsdRate:F1}");
-            CryptoTraderSettings.silverToUsdRate = listing.Slider(CryptoTraderSettings.silverToUsdRate, 1f, 100f);
+            // Fixed precision slider for silver to USD rate
+            listing.Label($"Silver to USD Rate: ${CryptoTraderSettings.silverToUsdRate:F1}");
+            
+            // Use a custom slider with proper step handling
+            var newRate = listing.Slider(CryptoTraderSettings.silverToUsdRate, 1f, 100f);
+            // Round to nearest 0.5 to avoid precision issues
+            CryptoTraderSettings.silverToUsdRate = Mathf.Round(newRate * 2f) / 2f;
+            
             listing.Gap(6f);
 
-            var rateInfo = $"1 silver = ${CryptoTraderSettings.silverToUsdRate:F1} USD (${1000f / CryptoTraderSettings.silverToUsdRate:F0} silver for $1000)";
+            var rateInfo = $"1 silver = ${CryptoTraderSettings.silverToUsdRate:F1} USD ({1000f / CryptoTraderSettings.silverToUsdRate:F0} silver for $1000)";
             GUI.color = Color.gray;
             listing.Label(rateInfo);
             GUI.color = Color.white;
@@ -64,7 +122,9 @@ namespace RimWorldCryptoTrader.Core
             if (CryptoTraderSettings.enableRealTimeUpdates)
             {
                 listing.Label($"Update Interval: {CryptoTraderSettings.updateIntervalSeconds:F1} seconds");
-                CryptoTraderSettings.updateIntervalSeconds = listing.Slider(CryptoTraderSettings.updateIntervalSeconds, 1f, 30f);
+                // Round to nearest 0.5 seconds for clean values
+                var newInterval = listing.Slider(CryptoTraderSettings.updateIntervalSeconds, 1f, 30f);
+                CryptoTraderSettings.updateIntervalSeconds = Mathf.Round(newInterval * 2f) / 2f;
             }
             
             listing.CheckboxLabeled("Show Detailed Prices", ref CryptoTraderSettings.showDetailedPrices);
@@ -80,7 +140,9 @@ namespace RimWorldCryptoTrader.Core
             if (CryptoTraderSettings.confirmLargeTransactions)
             {
                 listing.Label($"Large Transaction Threshold: ${CryptoTraderSettings.largeTransactionThreshold:F0}");
-                CryptoTraderSettings.largeTransactionThreshold = listing.Slider(CryptoTraderSettings.largeTransactionThreshold, 100f, 5000f);
+                // Round to nearest 50 for clean values
+                var newThreshold = listing.Slider(CryptoTraderSettings.largeTransactionThreshold, 100f, 5000f);
+                CryptoTraderSettings.largeTransactionThreshold = Mathf.Round(newThreshold / 50f) * 50f;
             }
             
             listing.CheckboxLabeled("Enable Trading Limits", ref CryptoTraderSettings.enableTradingLimits);
@@ -99,6 +161,8 @@ namespace RimWorldCryptoTrader.Core
                 CryptoTraderSettings.maxSingleDepositSilver = 500;
                 CryptoTraderSettings.confirmLargeTransactions = true;
                 CryptoTraderSettings.largeTransactionThreshold = 250f;
+                CryptoTraderSettings.toggleKey = KeyCode.Delete;
+                CryptoTraderSettings.keyInputLabel = "Delete";
             }
 
             if (Widgets.ButtonText(new Rect(buttonRect.x + buttonWidth + 5f, buttonRect.y, buttonWidth, 30f), "Balanced"))
@@ -107,6 +171,8 @@ namespace RimWorldCryptoTrader.Core
                 CryptoTraderSettings.maxSingleDepositSilver = 1000;
                 CryptoTraderSettings.confirmLargeTransactions = true;
                 CryptoTraderSettings.largeTransactionThreshold = 500f;
+                CryptoTraderSettings.toggleKey = KeyCode.Delete;
+                CryptoTraderSettings.keyInputLabel = "Delete";
             }
 
             if (Widgets.ButtonText(new Rect(buttonRect.x + (buttonWidth + 5f) * 2, buttonRect.y, buttonWidth, 30f), "Generous"))
@@ -115,9 +181,11 @@ namespace RimWorldCryptoTrader.Core
                 CryptoTraderSettings.maxSingleDepositSilver = 2000;
                 CryptoTraderSettings.confirmLargeTransactions = false;
                 CryptoTraderSettings.largeTransactionThreshold = 1000f;
+                CryptoTraderSettings.toggleKey = KeyCode.F5;
+                CryptoTraderSettings.keyInputLabel = "F5";
             }
 
-            if (Widgets.ButtonText(new Rect(buttonRect.x + (buttonWidth + 5f) * 3, buttonRect.y, buttonWidth, 30f), "Reset"))
+            if (Widgets.ButtonText(new Rect(buttonRect.x + (buttonWidth + 5f) * 3, buttonRect.y, buttonWidth, 30f), "Reset All"))
             {
                 CryptoTraderSettings.ResetToDefaults();
             }
@@ -127,7 +195,7 @@ namespace RimWorldCryptoTrader.Core
             // Instructions
             listing.Label("Changes are applied immediately and saved automatically.");
             GUI.color = Color.gray;
-            listing.Label("Access the trading terminal with the assigned hotkey (configurable in Controls).");
+            listing.Label($"Current hotkey: {CryptoTraderSettings.keyInputLabel} (customizable above)");
             GUI.color = Color.white;
 
             listing.End();

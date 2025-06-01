@@ -34,6 +34,12 @@ namespace RimWorldCryptoTrader.Core
                 }
             }
             
+            // Don't process input if we're waiting for key input in settings
+            if (CryptoTraderSettings.waitingForKeyInput)
+            {
+                return;
+            }
+            
             // Initialize keybinding system (only check once)
             if (!keyBindingChecked)
             {
@@ -43,9 +49,23 @@ namespace RimWorldCryptoTrader.Core
             
             bool shouldToggle = false;
             
-            // Try to use KeyBindingDef first, fallback to hardcoded key
-            if (useKeyBindingDef && toggleKeyBinding != null)
+            // Priority order:
+            // 1. Custom key from mod settings (if useCustomKey is enabled)
+            // 2. KeyBindingDef (if available)
+            // 3. Fallback to Delete key
+            
+            if (CryptoTraderSettings.useCustomKey)
             {
+                // Use custom key from mod settings
+                shouldToggle = Input.GetKeyDown(CryptoTraderSettings.toggleKey);
+                if (CryptoTraderSettings.enableDebugLogging && shouldToggle)
+                {
+                    Log.Message($"[CryptoTrader] Custom key triggered: {CryptoTraderSettings.toggleKey}");
+                }
+            }
+            else if (useKeyBindingDef && toggleKeyBinding != null)
+            {
+                // Use KeyBindingDef system
                 shouldToggle = toggleKeyBinding.JustPressed;
                 if (CryptoTraderSettings.enableDebugLogging && shouldToggle)
                 {
@@ -105,14 +125,26 @@ namespace RimWorldCryptoTrader.Core
                 else
                 {
                     useKeyBindingDef = false;
-                    Log.Warning("[CryptoTrader] KeyBindingDef not found. Using fallback Delete key. This is normal during development or if KeyBindingDefs.xml is not in the correct location.");
-                    Log.Message("[CryptoTrader] Trading terminal can be opened with the Delete key.");
+                    if (CryptoTraderSettings.enableDebugLogging)
+                    {
+                        Log.Warning("[CryptoTrader] KeyBindingDef not found. Using custom key from mod settings or fallback Delete key.");
+                    }
+                }
+                
+                // Always inform about current key configuration
+                if (CryptoTraderSettings.useCustomKey)
+                {
+                    Log.Message($"[CryptoTrader] Using custom key from mod settings: {CryptoTraderSettings.toggleKey}");
+                }
+                else
+                {
+                    Log.Message("[CryptoTrader] Using RimWorld's key binding system or fallback Delete key.");
                 }
             }
             catch (System.Exception ex)
             {
                 useKeyBindingDef = false;
-                Log.Error($"[CryptoTrader] Error initializing keybinding: {ex.Message}. Using fallback Delete key.");
+                Log.Error($"[CryptoTrader] Error initializing keybinding: {ex.Message}. Using custom key from mod settings or fallback Delete key.");
             }
         }
         
@@ -124,13 +156,27 @@ namespace RimWorldCryptoTrader.Core
                 return "Not initialized yet";
             }
             
-            if (useKeyBindingDef && toggleKeyBinding != null)
+            if (CryptoTraderSettings.useCustomKey)
+            {
+                return $"Using custom key: {CryptoTraderSettings.toggleKey}";
+            }
+            else if (useKeyBindingDef && toggleKeyBinding != null)
             {
                 return $"Using KeyBindingDef: {toggleKeyBinding.defaultKeyCodeA}";
             }
             else
             {
                 return "Using fallback Delete key";
+            }
+        }
+        
+        // Method to refresh keybinding when settings change
+        public static void RefreshKeyBinding()
+        {
+            keyBindingChecked = false;
+            if (CryptoTraderSettings.enableDebugLogging)
+            {
+                Log.Message("[CryptoTrader] Key binding refreshed due to settings change.");
             }
         }
     }
