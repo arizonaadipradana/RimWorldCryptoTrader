@@ -14,18 +14,28 @@ namespace RimWorldCryptoTrader.Services
         private const string BINANCE_API_BASE = "https://api.binance.com/api/v3";
         private const float TIMEOUT_SECONDS = 10f;
         private static Dictionary<string, CryptoPrice> cachedPrices = new Dictionary<string, CryptoPrice>();
-        private static float lastCacheUpdate = 0f;
-        private const float CACHE_DURATION = 30f; // Cache for 30 seconds
+        private static Dictionary<string, float> lastSymbolUpdate = new Dictionary<string, float>();
+        private const float CACHE_DURATION = 5f; // Reduced from 30s to 5s for more real-time updates
+        
+        // Debug flag for logging
+        private static bool debugMode = true;
 
         public static void GetCurrentPriceAsync(string symbol, System.Action<CryptoPrice> callback)
         {
-            // Check cache first
-            if (Time.time - lastCacheUpdate < CACHE_DURATION && cachedPrices.ContainsKey(symbol))
+            // Check cache first - use per-symbol cache timing
+            if (lastSymbolUpdate.ContainsKey(symbol) && 
+                Time.time - lastSymbolUpdate[symbol] < CACHE_DURATION && 
+                cachedPrices.ContainsKey(symbol))
             {
+                if (debugMode)
+                    Log.Message($"[CryptoTrader] Using cached price for {symbol}: ${cachedPrices[symbol].PriceUSDT:F2}");
                 callback?.Invoke(cachedPrices[symbol]);
                 return;
             }
 
+            if (debugMode)
+                Log.Message($"[CryptoTrader] Fetching fresh price for {symbol}...");
+                
             var gameObject = new GameObject("CryptoApiRequest");
             var component = gameObject.AddComponent<ApiRequestComponent>();
             component.StartCoroutine(GetCurrentPriceCoroutine(symbol, callback, gameObject));
@@ -36,6 +46,24 @@ namespace RimWorldCryptoTrader.Services
             var gameObject = new GameObject("CryptoMultiApiRequest");
             var component = gameObject.AddComponent<ApiRequestComponent>();
             component.StartCoroutine(GetMultiplePricesCoroutine(symbols, callback, gameObject));
+        }
+        
+        /// <summary>
+        /// Force refresh prices bypassing cache
+        /// </summary>
+        public static void ForceRefreshPricesAsync(List<string> symbols, System.Action<Dictionary<string, CryptoPrice>> callback)
+        {
+            if (debugMode)
+                Log.Message("[CryptoTrader] Force refreshing all prices...");
+                
+            // Clear cache for these symbols to force refresh
+            foreach (var symbol in symbols)
+            {
+                if (lastSymbolUpdate.ContainsKey(symbol))
+                    lastSymbolUpdate[symbol] = 0f;
+            }
+            
+            GetMultiplePricesAsync(symbols, callback);
         }
 
         public static void GetKlineDataAsync(string symbol, System.Action<List<CandleData>> callback, string interval = "1m", int limit = 100)
@@ -86,9 +114,12 @@ namespace RimWorldCryptoTrader.Services
                                 Timestamp = DateTime.Now
                             };
                             
-                            // Update cache
+                            // Update cache with per-symbol timing
                             cachedPrices[symbol] = price;
-                            lastCacheUpdate = Time.time;
+                            lastSymbolUpdate[symbol] = Time.time;
+                            
+                            if (debugMode)
+                                Log.Message($"[CryptoTrader] Updated price for {symbol}: ${price.PriceUSDT:F2} (Change: {price.ChangePercent24h:F2}%)");
                             
                             callback?.Invoke(price);
                         }
@@ -121,17 +152,30 @@ namespace RimWorldCryptoTrader.Services
         private static IEnumerator GetMultiplePricesCoroutine(List<string> symbols, System.Action<Dictionary<string, CryptoPrice>> callback, GameObject cleanup)
         {
             var results = new Dictionary<string, CryptoPrice>();
-            var remainingRequests = symbols.Count;
+            var fetchedCount = 0;
+            var totalSymbols = symbols.Count;
+
+            if (debugMode)
+                Log.Message($"[CryptoTrader] Fetching prices for {totalSymbols} symbols: {string.Join(", ", symbols)}");
 
             foreach (var symbol in symbols)
             {
-                // Check cache first
-                if (Time.time - lastCacheUpdate < CACHE_DURATION && cachedPrices.ContainsKey(symbol))
+                // Check cache first for each symbol individually
+                if (lastSymbolUpdate.ContainsKey(symbol) && 
+                    Time.time - lastSymbolUpdate[symbol] < CACHE_DURATION && 
+                    cachedPrices.ContainsKey(symbol))
                 {
                     results[symbol] = cachedPrices[symbol];
-                    remainingRequests--;
+                    fetchedCount++;
+                    
+                    if (debugMode)
+                        Log.Message($"[CryptoTrader] Using cached price for {symbol}: ${cachedPrices[symbol].PriceUSDT:F2}");
+                    
                     continue;
                 }
+
+                if (debugMode)
+                    Log.Message($"[CryptoTrader] Fetching fresh price for {symbol}...");
 
                 var url = $"{BINANCE_API_BASE}/ticker/24hr?symbol={symbol}";
                 
@@ -162,6 +206,14 @@ namespace RimWorldCryptoTrader.Services
                                 
                                 results[symbol] = price;
                                 cachedPrices[symbol] = price;
+                                lastSymbolUpdate[symbol] = Time.time;
+                                
+                                if (debugMode)
+                                    Log.Message($"[CryptoTrader] Updated price for {symbol}: ${price.PriceUSDT:F2} (Change: {price.ChangePercent24h:F2}%)");
+                            }
+                            else
+                            {
+                                Log.Error($"[CryptoTrader] Failed to parse price response for {symbol}");
                             }
                         }
                         else
@@ -174,14 +226,16 @@ namespace RimWorldCryptoTrader.Services
                         Log.Error($"[CryptoTrader] Error parsing price response for {symbol}: {ex.Message}");
                     }
                     
-                    remainingRequests--;
+                    fetchedCount++;
                 }
                 
                 // Small delay between requests to avoid rate limiting
                 yield return new WaitForSeconds(0.1f);
             }
             
-            lastCacheUpdate = Time.time;
+            if (debugMode)
+                Log.Message($"[CryptoTrader] Completed fetching prices. Total: {results.Count}/{totalSymbols} symbols");
+                
             callback?.Invoke(results);
             
             // Cleanup

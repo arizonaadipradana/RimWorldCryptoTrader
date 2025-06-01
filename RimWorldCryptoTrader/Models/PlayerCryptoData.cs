@@ -59,18 +59,19 @@ namespace RimWorldCryptoTrader.Models
             Scribe_Collections.Look(ref trackedCryptos, "trackedCryptos", LookMode.Value);
 
             // Legacy support - migrate old gold data to silver
+            // Use different node names to avoid conflicts with the new dictionary structure
             float legacyGold = 0f;
             float legacyBTC = 0f;
-            float legacyTotalInvested = 0f;
+            float legacyTotalInvestedSingle = 0f;
             Scribe_Values.Look(ref legacyGold, "goldDeposited", 0f);
             Scribe_Values.Look(ref legacyBTC, "btcHoldings", 0f);
-            Scribe_Values.Look(ref legacyTotalInvested, "totalInvested", 0f);
+            Scribe_Values.Look(ref legacyTotalInvestedSingle, "totalInvestedLegacy", 0f);
 
             if (Scribe.mode == LoadSaveMode.LoadingVars && legacyGold > 0)
             {
                 silverDeposited = legacyGold;
                 SetCryptoHolding("BTCUSDT", legacyBTC);
-                SetTotalInvested("BTCUSDT", legacyTotalInvested);
+                SetTotalInvested("BTCUSDT", legacyTotalInvestedSingle);
             }
 
             if (Scribe.mode == LoadSaveMode.PostLoadInit)

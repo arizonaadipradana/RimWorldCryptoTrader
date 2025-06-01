@@ -1,5 +1,6 @@
 using RimWorld;
 using RimWorldCryptoTrader.Models;
+using RimWorldCryptoTrader.Core;
 using System;
 using System.Linq;
 using Verse;
@@ -8,7 +9,8 @@ namespace RimWorldCryptoTrader.Services
 {
     public static class TradingService
     {
-        private const float SILVER_TO_USD_RATE = 1f; // 1 silver = 1 USD (adjust as needed)
+        // Get current conversion rate from config
+        private static float SILVER_TO_USD_RATE => CryptoTraderConfig.SilverToUsdRate;
 
         public static PlayerCryptoData GetPlayerData()
         {
@@ -42,7 +44,24 @@ namespace RimWorldCryptoTrader.Services
 
             if (availableSilver < silverAmount)
             {
-                Messages.Message($"Insufficient silver. Available: {availableSilver}, Required: {silverAmount}", 
+                Messages.Message($"Insufficient silver. Available: {availableSilver:N0}, Required: {silverAmount:N0}", 
+                    MessageTypeDefOf.RejectInput);
+                return false;
+            }
+            
+            // Safety check for large deposits
+            if (silverAmount > CryptoTraderConfig.MaxSingleDepositSilver)
+            {
+                var usdValue = silverAmount * SILVER_TO_USD_RATE;
+                Messages.Message($"Deposit amount too large! {silverAmount:N0} silver = ${usdValue:N0} USD. Maximum allowed: {CryptoTraderConfig.MaxSingleDepositSilver:N0} silver.", 
+                    MessageTypeDefOf.RejectInput);
+                return false;
+            }
+            
+            // Minimum deposit check
+            if (silverAmount < CryptoTraderConfig.MinimumSilverToTrade)
+            {
+                Messages.Message($"Minimum deposit: {CryptoTraderConfig.MinimumSilverToTrade} silver (${CryptoTraderConfig.MinimumSilverToTrade * SILVER_TO_USD_RATE} USD)", 
                     MessageTypeDefOf.RejectInput);
                 return false;
             }
@@ -50,8 +69,9 @@ namespace RimWorldCryptoTrader.Services
             // Actually consume silver from the colony
             if (ConsumeSilverFromColony(silverAmount))
             {
-                playerData.SilverDeposited += silverAmount * SILVER_TO_USD_RATE;
-                Messages.Message($"Deposited {silverAmount} silver (${silverAmount * SILVER_TO_USD_RATE} USD) to crypto exchange.",
+                var usdAmount = silverAmount * SILVER_TO_USD_RATE;
+                playerData.SilverDeposited += usdAmount;
+                Messages.Message($"Deposited {silverAmount:N0} silver → ${usdAmount:N0} USD (rate: 1 silver = ${SILVER_TO_USD_RATE} USD) to crypto exchange.",
                     MessageTypeDefOf.PositiveEvent);
                 return true;
             }
@@ -78,7 +98,7 @@ namespace RimWorldCryptoTrader.Services
             // Add silver back to colony
             SpawnSilverInColony(silverAmount);
 
-            Messages.Message($"Withdrew ${usdAmount} USD ({silverAmount} silver) from crypto exchange.",
+            Messages.Message($"Withdrew ${usdAmount:F0} USD → {silverAmount} silver (rate: 1 silver = ${SILVER_TO_USD_RATE} USD) from crypto exchange.",
                 MessageTypeDefOf.PositiveEvent);
             return true;
         }

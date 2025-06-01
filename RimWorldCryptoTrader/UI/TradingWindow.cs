@@ -1,5 +1,6 @@
 using RimWorldCryptoTrader.Models;
 using RimWorldCryptoTrader.Services;
+using RimWorldCryptoTrader.Core;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -22,7 +23,10 @@ namespace RimWorldCryptoTrader.UI
         private Dictionary<string, CryptoPrice> currentPrices = new Dictionary<string, CryptoPrice>();
         private Dictionary<string, List<CandleData>> candleData = new Dictionary<string, List<CandleData>>();
         private float lastUpdateTime = 0f;
-        private const float UPDATE_INTERVAL = 10f; // Update every 10 seconds
+        private const float UPDATE_INTERVAL = 1f; // Realtime update (1 second)
+        private string lastUpdateStatus = "Initializing...";
+        private bool isUpdating = false;
+        private float nextUpdateCountdown = 0f;
 
         // Trading tab variables
         private string selectedCrypto = "BTCUSDT";
@@ -53,8 +57,11 @@ namespace RimWorldCryptoTrader.UI
         {
             try
             {
-                // Update data periodically
-                if (Time.time - lastUpdateTime > UPDATE_INTERVAL)
+                // Calculate countdown for next update
+                nextUpdateCountdown = Math.Max(0f, UPDATE_INTERVAL - (Time.time - lastUpdateTime));
+                
+                // Update data periodically (only if not already updating)
+                if (!isUpdating && nextUpdateCountdown <= 0f)
                 {
                     FetchAllDataAsync();
                     lastUpdateTime = Time.time;
@@ -160,10 +167,17 @@ namespace RimWorldCryptoTrader.UI
         {
             Widgets.Label(new Rect(750f, yPos, 200f, 25f), "Account Summary:");
             yPos += 30f;
+            
+            // Show conversion rate prominently
+            GUI.color = Color.yellow;
+            Widgets.Label(new Rect(770f, yPos, 300f, 25f), $"Rate: 1 silver = ${CryptoTraderConfig.SilverToUsdRate} USD");
+            GUI.color = Color.white;
+            yPos += 25f;
 
             // Colony silver count
             var colonySilver = TradingService.GetColonySilverCount();
-            Widgets.Label(new Rect(770f, yPos, 300f, 25f), $"Colony Silver: {colonySilver:N0}");
+            var potentialUSD = colonySilver * CryptoTraderConfig.SilverToUsdRate;
+            Widgets.Label(new Rect(770f, yPos, 300f, 25f), $"Colony Silver: {colonySilver:N0} (≈${potentialUSD:N0} USD)");
             yPos += 25f;
 
             Widgets.Label(new Rect(770f, yPos, 300f, 25f), $"Deposited USD: ${playerData.SilverDeposited:F2}");
@@ -183,6 +197,7 @@ namespace RimWorldCryptoTrader.UI
 
         private void DrawCryptoSelector(Rect contentRect, ref float yPos, PlayerCryptoData playerData)
         {
+            yPos -= 50;
             Widgets.Label(new Rect(0f, yPos, 200f, 25f), "Select Cryptocurrency:");
             yPos += 30f;
 
@@ -203,35 +218,70 @@ namespace RimWorldCryptoTrader.UI
 
         private void DrawCurrentPriceSection(Rect contentRect, ref float yPos)
         {
-            var priceRect = new Rect(0f, yPos, contentRect.width, 60f);
+            var priceRect = new Rect(0f, yPos, contentRect.width, 80f); // Increased height for status
             Widgets.DrawBoxSolid(priceRect, Color.black);
 
             if (currentPrices.ContainsKey(selectedCrypto))
             {
                 var price = currentPrices[selectedCrypto];
-                Text.Font = GameFont.Medium;
+                Text.Font = GameFont.Small;
                 var cryptoName = TradingService.GetCryptoDisplayName(selectedCrypto);
                 var priceText = $"{cryptoName}/USDT: {price.FormattedPrice}";
                 var changeColor = price.ChangePercent24h >= 0 ? Color.green : Color.red;
                 var changeText = $"24h: {price.ChangePercent24h:F2}%";
+                var lastUpdate = $"Last update: {price.Timestamp:HH:mm:ss}";
 
                 Widgets.Label(new Rect(10f, yPos + 5f, 400f, 30f), priceText);
                 GUI.color = changeColor;
                 Widgets.Label(new Rect(10f, yPos + 30f, 400f, 25f), changeText);
                 GUI.color = Color.white;
+                
+                // Show last update time
+                GUI.color = Color.grey;
+                Widgets.Label(new Rect(10f, yPos + 50f, 300f, 20f), lastUpdate);
+                GUI.color = Color.white;
+                
                 Text.Font = GameFont.Small;
             }
             else
             {
                 Widgets.Label(new Rect(10f, yPos + 20f, 200f, 25f), "Loading price data...");
             }
+            
+            // Status and manual refresh button
+            //GUI.color = isUpdating ? Color.yellow : Color.white;
+            //Widgets.Label(new Rect(400f, yPos + 10f, 200f, 20f), lastUpdateStatus);
+            //GUI.color = Color.white;
+            
+            //// Manual refresh button
+            //if (Widgets.ButtonText(new Rect(400f, yPos + 35f, 100f, 25f), isUpdating ? "Updating..." : "Refresh Now"))
+            //{
+            //    if (!isUpdating)
+            //    {
+            //        ForceRefreshPrices();
+            //    }
+            //}
+            
+            // Auto-update countdown
+            //if (nextUpdateCountdown > 0 && !isUpdating)
+            //{
+            //    GUI.color = Color.grey;
+            //    Widgets.Label(new Rect(510f, yPos + 35f, 150f, 25f), $"Auto: {nextUpdateCountdown:F0}s");
+            //    GUI.color = Color.white;
+            //}
+            //else if (isUpdating)
+            //{
+            //    GUI.color = Color.yellow;
+            //    Widgets.Label(new Rect(510f, yPos + 35f, 150f, 25f), "Updating...");
+            //    GUI.color = Color.white;
+            //}
 
-            yPos += 70f;
+            yPos += 90f; // Increased to accommodate new elements
         }
 
         private void DrawChartSection(Rect contentRect, ref float yPos)
         {
-            var chartRect = new Rect(0f, yPos, contentRect.width, 180f);
+            var chartRect = new Rect(0f, yPos, contentRect.width, 250);
             Widgets.DrawBoxSolid(chartRect, Color.grey);
 
             if (candleData.ContainsKey(selectedCrypto) && candleData[selectedCrypto].Count > 0)
@@ -248,6 +298,7 @@ namespace RimWorldCryptoTrader.UI
 
         private void DrawTradingControls(Rect contentRect, ref float yPos, PlayerCryptoData playerData)
         {
+            yPos += 70;
             Widgets.Label(new Rect(0f, yPos, 200f, 25f), "Trading Controls:");
             yPos += 30f;
 
@@ -560,17 +611,36 @@ namespace RimWorldCryptoTrader.UI
 
         private void FetchAllDataAsync()
         {
+            if (isUpdating) return;
+            
             try
             {
+                isUpdating = true;
+                lastUpdateStatus = "Updating prices...";
+                
                 var playerData = TradingService.GetPlayerData();
                 
                 // Fetch prices for all tracked cryptocurrencies
                 BinanceApiService.GetMultiplePricesAsync(playerData.TrackedCryptos, prices =>
                 {
-                    if (prices != null)
+                    if (prices != null && prices.Count > 0)
                     {
                         currentPrices = prices;
+                        lastUpdateStatus = $"Updated {prices.Count} prices at {DateTime.Now:HH:mm:ss}";
+                        
+                        // Log specific price for debugging
+                        if (prices.ContainsKey(selectedCrypto))
+                        {
+                            var price = prices[selectedCrypto];
+                            Log.Message($"[CryptoTrader UI] {selectedCrypto} price updated: ${price.PriceUSDT:F2} at {price.Timestamp:HH:mm:ss}");
+                        }
                     }
+                    else
+                    {
+                        lastUpdateStatus = "Failed to fetch prices";
+                    }
+                    
+                    isUpdating = false;
                 });
 
                 // Fetch candle data for selected crypto
@@ -588,7 +658,44 @@ namespace RimWorldCryptoTrader.UI
             catch (Exception ex)
             {
                 Log.Error($"[CryptoTrader] Error fetching data: {ex.Message}");
+                lastUpdateStatus = "Error fetching data";
+                isUpdating = false;
             }
+        }
+        
+        private void ForceRefreshPrices()
+        {
+            if (isUpdating) return;
+            
+            isUpdating = true;
+            lastUpdateStatus = "Force refreshing prices...";
+            
+            var playerData = TradingService.GetPlayerData();
+            
+            // Force refresh all tracked cryptocurrencies
+            BinanceApiService.ForceRefreshPricesAsync(playerData.TrackedCryptos, prices =>
+            {
+                if (prices != null && prices.Count > 0)
+                {
+                    currentPrices = prices;
+                    lastUpdateStatus = $"Force updated {prices.Count} prices at {DateTime.Now:HH:mm:ss}";
+                    SetFeedback("Prices refreshed!");
+                    
+                    // Log all updated prices for debugging
+                    foreach (var kvp in prices)
+                    {
+                        Log.Message($"[CryptoTrader UI] Force updated {kvp.Key}: ${kvp.Value.PriceUSDT:F2} at {kvp.Value.Timestamp:HH:mm:ss}");
+                    }
+                }
+                else
+                {
+                    lastUpdateStatus = "Failed to refresh prices";
+                    SetFeedback("Failed to refresh prices");
+                }
+                
+                isUpdating = false;
+                lastUpdateTime = Time.time; // Reset auto-update timer
+            });
         }
     }
 }
