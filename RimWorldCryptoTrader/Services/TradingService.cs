@@ -8,7 +8,7 @@ namespace RimWorldCryptoTrader.Services
 {
     public static class TradingService
     {
-        private const decimal SILVER_TO_USD_RATE = 1m; // 1 silver = 1 USD (adjust as needed)
+        private const float SILVER_TO_USD_RATE = 1f; // 1 silver = 1 USD (adjust as needed)
 
         public static PlayerCryptoData GetPlayerData()
         {
@@ -62,7 +62,7 @@ namespace RimWorldCryptoTrader.Services
             }
         }
 
-        public static bool WithdrawSilver(decimal usdAmount)
+        public static bool WithdrawSilver(float usdAmount)
         {
             var playerData = GetPlayerData();
 
@@ -83,7 +83,7 @@ namespace RimWorldCryptoTrader.Services
             return true;
         }
 
-        public static bool BuyCrypto(string symbol, decimal usdAmount, decimal cryptoPrice)
+        public static bool BuyCrypto(string symbol, float usdAmount, float cryptoPrice)
         {
             var playerData = GetPlayerData();
 
@@ -121,7 +121,7 @@ namespace RimWorldCryptoTrader.Services
             return true;
         }
 
-        public static bool SellCrypto(string symbol, decimal cryptoAmount, decimal cryptoPrice)
+        public static bool SellCrypto(string symbol, float cryptoAmount, float cryptoPrice)
         {
             var playerData = GetPlayerData();
             var currentHolding = playerData.GetCryptoHolding(symbol);
@@ -143,11 +143,11 @@ namespace RimWorldCryptoTrader.Services
             if (remainingHolding > 0)
             {
                 var sellRatio = cryptoAmount / currentHolding;
-                playerData.SetTotalInvested(symbol, currentInvested * (1m - sellRatio));
+                playerData.SetTotalInvested(symbol, currentInvested * (1f - sellRatio));
             }
             else
             {
-                playerData.SetTotalInvested(symbol, 0m);
+                playerData.SetTotalInvested(symbol, 0f);
             }
 
             // Record transaction
@@ -246,17 +246,17 @@ namespace RimWorldCryptoTrader.Services
             return DepositSilver(goldAmount);
         }
 
-        public static bool WithdrawGold(decimal usdAmount)
+        public static bool WithdrawGold(float usdAmount)
         {
             return WithdrawSilver(usdAmount);
         }
 
-        public static bool BuyBTC(decimal usdAmount, decimal btcPrice)
+        public static bool BuyBTC(float usdAmount, float btcPrice)
         {
             return BuyCrypto("BTCUSDT", usdAmount, btcPrice);
         }
 
-        public static bool SellBTC(decimal btcAmount, decimal btcPrice)
+        public static bool SellBTC(float btcAmount, float btcPrice)
         {
             return SellCrypto("BTCUSDT", btcAmount, btcPrice);
         }

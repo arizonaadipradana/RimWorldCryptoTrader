@@ -23,13 +23,13 @@ namespace RimWorldCryptoTrader.Models
                 if (symbolMatch.Success)
                     response.Symbol = symbolMatch.Groups[1].Value;
                     
-                if (lastPriceMatch.Success && decimal.TryParse(lastPriceMatch.Groups[1].Value, NumberStyles.Float, CultureInfo.InvariantCulture, out decimal lastPrice))
+                if (lastPriceMatch.Success && float.TryParse(lastPriceMatch.Groups[1].Value, NumberStyles.Float, CultureInfo.InvariantCulture, out float lastPrice))
                     response.LastPrice = lastPrice;
                     
-                if (priceChangeMatch.Success && decimal.TryParse(priceChangeMatch.Groups[1].Value, NumberStyles.Float, CultureInfo.InvariantCulture, out decimal priceChange))
+                if (priceChangeMatch.Success && float.TryParse(priceChangeMatch.Groups[1].Value, NumberStyles.Float, CultureInfo.InvariantCulture, out float priceChange))
                     response.PriceChange = priceChange;
                     
-                if (priceChangePercentMatch.Success && decimal.TryParse(priceChangePercentMatch.Groups[1].Value, NumberStyles.Float, CultureInfo.InvariantCulture, out decimal priceChangePercent))
+                if (priceChangePercentMatch.Success && float.TryParse(priceChangePercentMatch.Groups[1].Value, NumberStyles.Float, CultureInfo.InvariantCulture, out float priceChangePercent))
                     response.PriceChangePercent = priceChangePercent;
                 
                 return response;
@@ -64,19 +64,19 @@ namespace RimWorldCryptoTrader.Models
                                 candle.Time = DateTimeOffset.FromUnixTimeMilliseconds(timestamp).DateTime;
                             
                             // Parse OHLCV values (remove quotes and parse)
-                            if (decimal.TryParse(values[1].Trim('"', ' '), NumberStyles.Float, CultureInfo.InvariantCulture, out decimal open))
+                            if (float.TryParse(values[1].Trim('"', ' '), NumberStyles.Float, CultureInfo.InvariantCulture, out float open))
                                 candle.Open = open;
                                 
-                            if (decimal.TryParse(values[2].Trim('"', ' '), NumberStyles.Float, CultureInfo.InvariantCulture, out decimal high))
+                            if (float.TryParse(values[2].Trim('"', ' '), NumberStyles.Float, CultureInfo.InvariantCulture, out float high))
                                 candle.High = high;
                                 
-                            if (decimal.TryParse(values[3].Trim('"', ' '), NumberStyles.Float, CultureInfo.InvariantCulture, out decimal low))
+                            if (float.TryParse(values[3].Trim('"', ' '), NumberStyles.Float, CultureInfo.InvariantCulture, out float low))
                                 candle.Low = low;
                                 
-                            if (decimal.TryParse(values[4].Trim('"', ' '), NumberStyles.Float, CultureInfo.InvariantCulture, out decimal close))
+                            if (float.TryParse(values[4].Trim('"', ' '), NumberStyles.Float, CultureInfo.InvariantCulture, out float close))
                                 candle.Close = close;
                                 
-                            if (decimal.TryParse(values[5].Trim('"', ' '), NumberStyles.Float, CultureInfo.InvariantCulture, out decimal volume))
+                            if (float.TryParse(values[5].Trim('"', ' '), NumberStyles.Float, CultureInfo.InvariantCulture, out float volume))
                                 candle.Volume = volume;
                             
                             result.Add(candle);
@@ -101,46 +101,46 @@ namespace RimWorldCryptoTrader.Models
     public class BinanceTickerResponse
     {
         public string Symbol { get; set; }
-        public decimal Price { get; set; }
+        public float Price { get; set; }
         public long Time { get; set; }
     }
 
     public class BinanceTickerResponse24h
     {
         public string Symbol { get; set; }
-        public decimal LastPrice { get; set; }
-        public decimal PriceChange { get; set; }
-        public decimal PriceChangePercent { get; set; }
+        public float LastPrice { get; set; }
+        public float PriceChange { get; set; }
+        public float PriceChangePercent { get; set; }
     }
 
     public class BinanceKlineResponse
     {
         public long OpenTime { get; set; }
-        public decimal Open { get; set; }
-        public decimal High { get; set; }
-        public decimal Low { get; set; }
-        public decimal Close { get; set; }
-        public decimal Volume { get; set; }
+        public float Open { get; set; }
+        public float High { get; set; }
+        public float Low { get; set; }
+        public float Close { get; set; }
+        public float Volume { get; set; }
         public long CloseTime { get; set; }
     }
 
     public class CryptoPrice
     {
         public string Symbol { get; set; }
-        public decimal PriceUSDT { get; set; }
+        public float PriceUSDT { get; set; }
         public DateTime Timestamp { get; set; }
         public string FormattedPrice => $"${PriceUSDT:N2}";
-        public decimal Change24h { get; set; }
-        public decimal ChangePercent24h { get; set; }
+        public float Change24h { get; set; }
+        public float ChangePercent24h { get; set; }
     }
 
     public class CandleData
     {
         public DateTime Time { get; set; }
-        public decimal Open { get; set; }
-        public decimal High { get; set; }
-        public decimal Low { get; set; }
-        public decimal Close { get; set; }
-        public decimal Volume { get; set; }
+        public float Open { get; set; }
+        public float High { get; set; }
+        public float Low { get; set; }
+        public float Close { get; set; }
+        public float Volume { get; set; }
     }
 }

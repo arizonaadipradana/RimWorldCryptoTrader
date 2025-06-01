@@ -6,26 +6,26 @@ namespace RimWorldCryptoTrader.Models
 {
     public class PlayerCryptoData : GameComponent
     {
-        private decimal silverDeposited = 0m;
-        private Dictionary<string, decimal> cryptoHoldings = new Dictionary<string, decimal>();
-        private Dictionary<string, decimal> totalInvested = new Dictionary<string, decimal>();
+        private float silverDeposited = 0f;
+        private Dictionary<string, float> cryptoHoldings = new Dictionary<string, float>();
+        private Dictionary<string, float> totalInvested = new Dictionary<string, float>();
         private List<TradeTransaction> transactions = new List<TradeTransaction>();
         private List<string> trackedCryptos = new List<string>();
 
-        public decimal SilverDeposited { get => silverDeposited; set => silverDeposited = value; }
-        public Dictionary<string, decimal> CryptoHoldings { get => cryptoHoldings; set => cryptoHoldings = value ?? new Dictionary<string, decimal>(); }
-        public Dictionary<string, decimal> TotalInvested { get => totalInvested; set => totalInvested = value ?? new Dictionary<string, decimal>(); }
+        public float SilverDeposited { get => silverDeposited; set => silverDeposited = value; }
+        public Dictionary<string, float> CryptoHoldings { get => cryptoHoldings; set => cryptoHoldings = value ?? new Dictionary<string, float>(); }
+        public Dictionary<string, float> TotalInvested { get => totalInvested; set => totalInvested = value ?? new Dictionary<string, float>(); }
         public List<TradeTransaction> Transactions { get => transactions; set => transactions = value ?? new List<TradeTransaction>(); }
         public List<string> TrackedCryptos { get => trackedCryptos; set => trackedCryptos = value ?? new List<string>(); }
 
         // Legacy properties for backward compatibility
-        public decimal GoldDeposited 
+        public float GoldDeposited 
         { 
             get => silverDeposited; 
             set => silverDeposited = value; 
         }
         
-        public decimal BTCHoldings 
+        public float BTCHoldings 
         { 
             get => GetCryptoHolding("BTCUSDT"); 
             set => SetCryptoHolding("BTCUSDT", value); 
@@ -52,19 +52,19 @@ namespace RimWorldCryptoTrader.Models
         public override void ExposeData()
         {
             base.ExposeData();
-            Scribe_Values.Look(ref silverDeposited, "silverDeposited", 0m);
+            Scribe_Values.Look(ref silverDeposited, "silverDeposited", 0f);
             Scribe_Collections.Look(ref cryptoHoldings, "cryptoHoldings", LookMode.Value, LookMode.Value);
             Scribe_Collections.Look(ref totalInvested, "totalInvested", LookMode.Value, LookMode.Value);
             Scribe_Collections.Look(ref transactions, "transactions", LookMode.Deep);
             Scribe_Collections.Look(ref trackedCryptos, "trackedCryptos", LookMode.Value);
 
             // Legacy support - migrate old gold data to silver
-            decimal legacyGold = 0m;
-            decimal legacyBTC = 0m;
-            decimal legacyTotalInvested = 0m;
-            Scribe_Values.Look(ref legacyGold, "goldDeposited", 0m);
-            Scribe_Values.Look(ref legacyBTC, "btcHoldings", 0m);
-            Scribe_Values.Look(ref legacyTotalInvested, "totalInvested", 0m);
+            float legacyGold = 0f;
+            float legacyBTC = 0f;
+            float legacyTotalInvested = 0f;
+            Scribe_Values.Look(ref legacyGold, "goldDeposited", 0f);
+            Scribe_Values.Look(ref legacyBTC, "btcHoldings", 0f);
+            Scribe_Values.Look(ref legacyTotalInvested, "totalInvested", 0f);
 
             if (Scribe.mode == LoadSaveMode.LoadingVars && legacyGold > 0)
             {
@@ -76,28 +76,28 @@ namespace RimWorldCryptoTrader.Models
             if (Scribe.mode == LoadSaveMode.PostLoadInit)
             {
                 InitializeDefaults();
-                if (cryptoHoldings == null) cryptoHoldings = new Dictionary<string, decimal>();
-                if (totalInvested == null) totalInvested = new Dictionary<string, decimal>();
+                if (cryptoHoldings == null) cryptoHoldings = new Dictionary<string, float>();
+                if (totalInvested == null) totalInvested = new Dictionary<string, float>();
                 if (transactions == null) transactions = new List<TradeTransaction>();
             }
         }
 
-        public decimal GetCryptoHolding(string symbol)
+        public float GetCryptoHolding(string symbol)
         {
-            return cryptoHoldings.TryGetValue(symbol, out decimal value) ? value : 0m;
+            return cryptoHoldings.TryGetValue(symbol, out float value) ? value : 0f;
         }
 
-        public void SetCryptoHolding(string symbol, decimal amount)
+        public void SetCryptoHolding(string symbol, float amount)
         {
             cryptoHoldings[symbol] = amount;
         }
 
-        public decimal GetTotalInvested(string symbol)
+        public float GetTotalInvested(string symbol)
         {
-            return totalInvested.TryGetValue(symbol, out decimal value) ? value : 0m;
+            return totalInvested.TryGetValue(symbol, out float value) ? value : 0f;
         }
 
-        public void SetTotalInvested(string symbol, decimal amount)
+        public void SetTotalInvested(string symbol, float amount)
         {
             totalInvested[symbol] = amount;
         }
@@ -120,29 +120,29 @@ namespace RimWorldCryptoTrader.Models
             }
         }
 
-        public decimal CurrentValue(string symbol, decimal currentPrice)
+        public float CurrentValue(string symbol, float currentPrice)
         {
             return GetCryptoHolding(symbol) * currentPrice;
         }
 
-        public decimal ProfitLoss(string symbol, decimal currentPrice)
+        public float ProfitLoss(string symbol, float currentPrice)
         {
             return CurrentValue(symbol, currentPrice) - GetTotalInvested(symbol);
         }
 
-        public decimal ProfitLossPercentage(string symbol, decimal currentPrice)
+        public float ProfitLossPercentage(string symbol, float currentPrice)
         {
             var invested = GetTotalInvested(symbol);
             if (invested == 0) return 0;
             return (ProfitLoss(symbol, currentPrice) / invested) * 100;
         }
 
-        public decimal GetTotalPortfolioValue(Dictionary<string, decimal> currentPrices)
+        public float GetTotalPortfolioValue(Dictionary<string, float> currentPrices)
         {
-            decimal total = 0m;
+            float total = 0f;
             foreach (var symbol in trackedCryptos)
             {
-                if (currentPrices.TryGetValue(symbol, out decimal price))
+                if (currentPrices.TryGetValue(symbol, out float price))
                 {
                     total += CurrentValue(symbol, price);
                 }
@@ -150,12 +150,12 @@ namespace RimWorldCryptoTrader.Models
             return total + silverDeposited;
         }
 
-        public decimal GetTotalPortfolioProfitLoss(Dictionary<string, decimal> currentPrices)
+        public float GetTotalPortfolioProfitLoss(Dictionary<string, float> currentPrices)
         {
-            decimal totalPL = 0m;
+            float totalPL = 0f;
             foreach (var symbol in trackedCryptos)
             {
-                if (currentPrices.TryGetValue(symbol, out decimal price))
+                if (currentPrices.TryGetValue(symbol, out float price))
                 {
                     totalPL += ProfitLoss(symbol, price);
                 }
@@ -164,17 +164,17 @@ namespace RimWorldCryptoTrader.Models
         }
 
         // Legacy methods for backward compatibility
-        public decimal CurrentValue(decimal currentPrice)
+        public float CurrentValue(float currentPrice)
         {
             return CurrentValue("BTCUSDT", currentPrice);
         }
 
-        public decimal ProfitLoss(decimal currentPrice)
+        public float ProfitLoss(float currentPrice)
         {
             return ProfitLoss("BTCUSDT", currentPrice);
         }
 
-        public decimal ProfitLossPercentage(decimal currentPrice)
+        public float ProfitLossPercentage(float currentPrice)
         {
             return ProfitLossPercentage("BTCUSDT", currentPrice);
         }
@@ -184,20 +184,20 @@ namespace RimWorldCryptoTrader.Models
     {
         private string type;
         private string symbol;
-        private decimal amount;
-        private decimal price;
-        private decimal silverUsed;
+        private float amount;
+        private float price;
+        private float silverUsed;
         private string timestamp;
 
         public string Type { get => type; set => type = value; }
         public string Symbol { get => symbol; set => symbol = value; }
-        public decimal Amount { get => amount; set => amount = value; }
-        public decimal Price { get => price; set => price = value; }
-        public decimal SilverUsed { get => silverUsed; set => silverUsed = value; }
+        public float Amount { get => amount; set => amount = value; }
+        public float Price { get => price; set => price = value; }
+        public float SilverUsed { get => silverUsed; set => silverUsed = value; }
         public string Timestamp { get => timestamp; set => timestamp = value; }
 
         // Legacy property for backward compatibility
-        public decimal GoldUsed { get => silverUsed; set => silverUsed = value; }
+        public float GoldUsed { get => silverUsed; set => silverUsed = value; }
 
         public void ExposeData()
         {
@@ -209,8 +209,8 @@ namespace RimWorldCryptoTrader.Models
             Scribe_Values.Look(ref timestamp, "timestamp");
 
             // Legacy support
-            decimal legacyGoldUsed = 0m;
-            Scribe_Values.Look(ref legacyGoldUsed, "goldUsed", 0m);
+            float legacyGoldUsed = 0f;
+            Scribe_Values.Look(ref legacyGoldUsed, "goldUsed", 0f);
             if (Scribe.mode == LoadSaveMode.LoadingVars && legacyGoldUsed > 0 && silverUsed == 0)
             {
                 silverUsed = legacyGoldUsed;

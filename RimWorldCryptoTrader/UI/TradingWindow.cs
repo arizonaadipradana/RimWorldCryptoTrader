@@ -158,24 +158,24 @@ namespace RimWorldCryptoTrader.UI
 
         private void DrawAccountSummary(Rect contentRect, ref float yPos, PlayerCryptoData playerData)
         {
-            Widgets.Label(new Rect(0f, yPos, 200f, 25f), "Account Summary:");
+            Widgets.Label(new Rect(750f, yPos, 200f, 25f), "Account Summary:");
             yPos += 30f;
 
             // Colony silver count
             var colonySilver = TradingService.GetColonySilverCount();
-            Widgets.Label(new Rect(20f, yPos, 300f, 25f), $"Colony Silver: {colonySilver:N0}");
+            Widgets.Label(new Rect(770f, yPos, 300f, 25f), $"Colony Silver: {colonySilver:N0}");
             yPos += 25f;
 
-            Widgets.Label(new Rect(20f, yPos, 300f, 25f), $"Deposited USD: ${playerData.SilverDeposited:F2}");
+            Widgets.Label(new Rect(770f, yPos, 300f, 25f), $"Deposited USD: ${playerData.SilverDeposited:F2}");
             yPos += 25f;
 
             var totalPortfolioValue = playerData.GetTotalPortfolioValue(currentPrices.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.PriceUSDT));
-            Widgets.Label(new Rect(20f, yPos, 300f, 25f), $"Total Portfolio: ${totalPortfolioValue:F2}");
+            Widgets.Label(new Rect(770f, yPos, 300f, 25f), $"Total Portfolio: ${totalPortfolioValue:F2}");
             yPos += 25f;
 
             var totalPL = playerData.GetTotalPortfolioProfitLoss(currentPrices.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.PriceUSDT));
             GUI.color = totalPL >= 0 ? Color.green : Color.red;
-            Widgets.Label(new Rect(20f, yPos, 300f, 25f), $"Total P&L: ${totalPL:F2}");
+            Widgets.Label(new Rect(770f, yPos, 300f, 25f), $"Total P&L: ${totalPL:F2}");
             GUI.color = Color.white;
 
             yPos += 40f;
@@ -267,7 +267,7 @@ namespace RimWorldCryptoTrader.UI
             withdrawAmount = Widgets.TextField(new Rect(150f, yPos, 80f, 25f), withdrawAmount);
             if (Widgets.ButtonText(new Rect(240f, yPos, 80f, 25f), "Withdraw"))
             {
-                if (decimal.TryParse(withdrawAmount, out decimal amount))
+                if (float.TryParse(withdrawAmount, out float amount))
                 {
                     TradingService.WithdrawSilver(amount);
                 }
@@ -284,7 +284,7 @@ namespace RimWorldCryptoTrader.UI
                 buyAmount = Widgets.TextField(new Rect(150f, yPos, 80f, 25f), buyAmount);
                 if (Widgets.ButtonText(new Rect(240f, yPos, 100f, 25f), $"Buy {cryptoName}"))
                 {
-                    if (decimal.TryParse(buyAmount, out decimal amount))
+                    if (float.TryParse(buyAmount, out float amount))
                     {
                         TradingService.BuyCrypto(selectedCrypto, amount, price.PriceUSDT);
                     }
@@ -295,7 +295,7 @@ namespace RimWorldCryptoTrader.UI
                 sellAmount = Widgets.TextField(new Rect(150f, yPos, 80f, 25f), sellAmount);
                 if (Widgets.ButtonText(new Rect(240f, yPos, 100f, 25f), $"Sell {cryptoName}"))
                 {
-                    if (decimal.TryParse(sellAmount, out decimal amount))
+                    if (float.TryParse(sellAmount, out float amount))
                     {
                         TradingService.SellCrypto(selectedCrypto, amount, price.PriceUSDT);
                     }
@@ -308,20 +308,20 @@ namespace RimWorldCryptoTrader.UI
             float yPos = 10f;
 
             // Portfolio summary
-            Widgets.Label(new Rect(0f, yPos, 200f, 30f), "Portfolio Overview:");
+            Widgets.Label(new Rect(750f, yPos, 200f, 30f), "Portfolio Overview:");
             yPos += 40f;
 
             var totalValue = playerData.GetTotalPortfolioValue(currentPrices.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.PriceUSDT));
             var totalPL = playerData.GetTotalPortfolioProfitLoss(currentPrices.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.PriceUSDT));
 
-            Widgets.Label(new Rect(20f, yPos, 300f, 25f), $"Cash (USD): ${playerData.SilverDeposited:F2}");
+            Widgets.Label(new Rect(770f, yPos, 300f, 25f), $"Cash (USD): ${playerData.SilverDeposited:F2}");
             yPos += 25f;
 
-            Widgets.Label(new Rect(20f, yPos, 300f, 25f), $"Total Portfolio Value: ${totalValue:F2}");
+            Widgets.Label(new Rect(770f, yPos, 300f, 25f), $"Total Portfolio Value: ${totalValue:F2}");
             yPos += 25f;
 
             GUI.color = totalPL >= 0 ? Color.green : Color.red;
-            Widgets.Label(new Rect(20f, yPos, 300f, 25f), $"Total Profit/Loss: ${totalPL:F2}");
+            Widgets.Label(new Rect(770f, yPos, 300f, 25f), $"Total Profit/Loss: ${totalPL:F2}");
             GUI.color = Color.white;
             yPos += 40f;
 
@@ -409,15 +409,15 @@ namespace RimWorldCryptoTrader.UI
         {
             float yPos = 10f;
 
-            Widgets.Label(new Rect(0f, yPos, 300f, 25f), "Add New Cryptocurrency:");
+            Widgets.Label(new Rect(750f, yPos, 300f, 25f), "Add New Cryptocurrency:");
             yPos += 40f;
 
-            Widgets.Label(new Rect(20f, yPos, 200f, 25f), "Enter Symbol (e.g., ETHUSDT):");
+            Widgets.Label(new Rect(770f, yPos, 200f, 25f), "Enter Symbol (e.g., ETHUSDT):");
             yPos += 30f;
 
-            newCryptoSymbol = Widgets.TextField(new Rect(20f, yPos, 200f, 30f), newCryptoSymbol);
+            newCryptoSymbol = Widgets.TextField(new Rect(770f, yPos, 200f, 30f), newCryptoSymbol);
             
-            if (Widgets.ButtonText(new Rect(230f, yPos, 80f, 30f), "Add"))
+            if (Widgets.ButtonText(new Rect(1000f, yPos, 80f, 30f), "Add"))
             {
                 AddNewCrypto(playerData, newCryptoSymbol);
             }
